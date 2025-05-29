@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  postiz:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - NEXT_PUBLIC_BACKEND_URL=https://postiz.apps.maformationenvisio.com/api
+      - FRONTEND_URL=https://postiz.apps.maformationenvisio.com
+      - MAIN_URL=https://postiz.apps.maformationenvisio.com
+      - BACKEND_INTERNAL_URL=http://localhost:3000
+      - IS_GENERAL=true
+      - NOT_SECURED=true
+      - JWT_SECRET=${SERVICE_PASSWORD_JWTSECRET}
+      - DATABASE_URL=postgresql://postgres:${SERVICE_PASSWORD_POSTGRESQL}@postgres:5432/postiz-db
+      - REDIS_URL=redis://default:${SERVICE_PASSWORD_REDIS}@redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - postiz_uploads:/uploads
+      - postiz_config:/config
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:5000/ || exit 1']
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  postgres:
+    image: postgres:14.5
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRESQL}
+      - POSTGRES_DB=postiz-db
+    volumes:
+      - postiz_postgresql_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d postiz-db']
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  redis:
+    image: redis:7.2
+    command: redis-server --requirepass ${SERVICE_PASSWORD_REDIS}
+    environment:
+      - REDIS_PASSWORD=${SERVICE_PASSWORD_REDIS}
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${SERVICE_PASSWORD_REDIS}', 'ping']
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+volumes:
+  postiz_postgresql_data:
+  postiz_uploads:
+  postiz_config:
