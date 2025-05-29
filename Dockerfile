@@ -1,23 +1,21 @@
-# Étape 1 : Build
-FROM node:18 AS builder
-
-# Créer un dossier app
-WORKDIR /app
-
-# Cloner le repo Postiz
-RUN git clone https://github.com/gitroomhq/postiz . && \
-    yarn install && \
-    yarn build
-
-# Étape 2 : Runtime
 FROM node:18
 
 WORKDIR /app
 
-COPY --from=builder /app /app
+RUN git clone https://github.com/gitroomhq/postiz . 
 
-# Expose le port utilisé par le backend (5000)
-EXPOSE 5000
+ENV NEXT_PUBLIC_BACKEND_URL=https://postiz.apps.maformationenvisio.com/api
+ENV MAIN_URL=https://postiz.apps.maformationenvisio.com
+ENV FRONTEND_URL=https://postiz.apps.maformationenvisio.com
+ENV JWT_SECRET=un_secret_fort
+ENV BACKEND_INTERNAL_URL=http://localhost:3000
+ENV IS_GENERAL=true
+ENV DATABASE_URL=postgresql://postiz-user:postiz-password@postiz-postgres:5432/postiz-db-local
+ENV REDIS_URL=redis://postiz-redis:6379
+ENV STORAGE_PROVIDER=local
+ENV UPLOAD_DIRECTORY=/uploads
+ENV NEXT_PUBLIC_UPLOAD_DIRECTORY=/uploads
 
-# Démarre le serveur Next.js
-CMD ["yarn", "start"]
+RUN yarn install && yarn build
+
+CMD ["caddy", "run", "--config", "Caddyfile"]
